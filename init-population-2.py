@@ -13,7 +13,7 @@ NORTH_POLE_LONG = 0
 EMPTY_SLEIGH_WEIGHT = float(10.0)
 GIFTS_COUNT = 100000
 SLEIGH_CAPACITY = 1000
-INITIAL_POPULATION_SIZE = 200
+INITIAL_POPULATION_SIZE = 300
 MAX_ITERATIONS = 100000
 TOP_K = int(INITIAL_POPULATION_SIZE * 0.1) if int(INITIAL_POPULATION_SIZE * 0.1 > 10) else 10
 
@@ -56,7 +56,7 @@ def generate_population(ind_id):
     trip_list = []
     highest_count = 0
     while len(available_gifts) > 0:
-        print(f'trip_num: {trip_num} total_cost: {total_cost} available_gifts: {len(available_gifts)}')
+        # print(f'trip_num: {trip_num} total_cost: {total_cost} available_gifts: {len(available_gifts)}')
         gift_index = random.randint(0, len(available_gifts) - 1)
 
         gift_id = available_gifts[gift_index]
@@ -87,12 +87,13 @@ def generate_population(ind_id):
 
                             trip_total_weight += next_weight
                             gifts_checklist[gift_id] = 1
+
+                            # to observe avg number of closest points required
                             if highest_count < count:
                                 highest_count = count
-                                print(f'highest_count found: {highest_count}')
                             break
                 else:
-                    print(f'end_trip with total_weight: {trip_total_weight}')
+                    # print(f'end_trip with total_weight: {trip_total_weight}')
                     end_trip = True
         
         trip_list.append(trip_gifts_list)
@@ -131,13 +132,13 @@ if __name__ == '__main__':
     print("Initiating population...")
     
     # Try generate 1
-    generate_population(2)
+    # generate_population(2)
 
-    # pool = multiprocessing.Pool(processes = multiprocessing.cpu_count()-1)
-    # size_list = list(range(INITIAL_POPULATION_SIZE))
-    # pool.map(generate_population, size_list)
-    # pool.close()
-    # pool.join()
+    pool = multiprocessing.Pool(processes = multiprocessing.cpu_count()-1)
+    size_list = list(range(INITIAL_POPULATION_SIZE))
+    pool.map(generate_population, size_list)
+    pool.close()
+    pool.join()
 
     end = time.time()
     print("Time taken to init population:", end-start)
