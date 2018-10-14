@@ -48,6 +48,7 @@ def trip_cost(gift_list, total_weight, weight_list, distance_list):
     return weighted_distance
 
 def generate_population(ind_id):
+    start = time.time()
     gifts_checklist = get_gifts_checklist()
     available_gifts = get_available_gifts(gifts_checklist)
     total_cost = 0
@@ -101,7 +102,8 @@ def generate_population(ind_id):
         trip_num += 1
         total_cost += trip_cost(trip_gifts_list, trip_total_weight, trip_weight_list, trip_distance_list)
 
-    print(f'ind_id:{ind_id} highest_count:{highest_count} total_trip_num:{trip_num} total_cost:{total_cost}')
+    end = time.time()
+    print(f'ind_id:{ind_id} highest_count:{highest_count} total_trip_num:{trip_num} total_cost:{total_cost} time_elapsed:{end-start}')
     REDIS_CLIENT.hset(f'ind-{ind_id}', 'trip_list', json.dumps(trip_list))
     REDIS_CLIENT.hset(f'ind-{ind_id}', 'total_cost', total_cost)
 
