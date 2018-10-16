@@ -22,19 +22,17 @@ def create_submission(ind):
         trip_writer = csv.writer(trip_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         trip_writer.writerow(["GiftId", "TripId"])
         trip_id = 0
+        count = 0
         for trip in ind:
+            if len(trip) < 10:
+                count +=1
             for gift in trip:
                 trip_writer.writerow([gift, trip_id])
             trip_id += 1
+        print(count)
 
 if __name__ == '__main__':
-    ind = get_individual(1)
-
-    # count = 0
-    # for trip in ind:
-    #     total_weight = calculate_weight(trip)
-    #     if total_weight > 1000:
-    #         print(f"trip:{count} total_weight:{total_weight}")
-    #     count += 1
-
+    # get individual with ind_id
+    ind = get_individual(0)
+    
     create_submission(ind)
