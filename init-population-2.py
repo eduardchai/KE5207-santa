@@ -19,14 +19,17 @@ TOP_K = int(INITIAL_POPULATION_SIZE * 0.1) if int(INITIAL_POPULATION_SIZE * 0.1 
 
 REDIS_CLIENT = redis.StrictRedis(host='localhost', port=6379, db=0)
 
+
 def get_gifts_checklist():
     gifts_checklist = {}
     for i in range(GIFTS_COUNT):
         gifts_checklist[i+1] = 0
     return gifts_checklist
 
+
 def get_available_gifts(gifts):
     return [key for key, value in gifts.items() if not value]
+
 
 def trip_cost(gift_list, total_weight, weight_list, distance_list):
     
@@ -46,6 +49,7 @@ def trip_cost(gift_list, total_weight, weight_list, distance_list):
         total_weight = remaining_weight
     
     return weighted_distance
+
 
 def generate_population(ind_id):
     start = time.time()
@@ -109,24 +113,10 @@ def generate_population(ind_id):
 
     return trip_list
 
+
 def get_individual(ind_id):
     return json.loads(REDIS_CLIENT.hget(f'ind-{ind_id}', 'trip_list'))
 
-# =============================
-# GENERATE POPULATION
-# =============================
-# start = time.time()
-# print("Initiating population...")
-
-# pool = multiprocessing.Pool(processes = multiprocessing.cpu_count()-1)
-# mp_initial_population = multiprocessing.Manager().list()
-# size_list = list(range(200, INITIAL_POPULATION_SIZE))
-# pool.map(generate_population, size_list)
-# pool.close()
-# pool.join()
-
-# end = time.time()
-# print("Time taken to init population:", end-start)
 
 if __name__ == '__main__':
 
@@ -136,7 +126,7 @@ if __name__ == '__main__':
     # Try generate 1
     # generate_population(2)
 
-    pool = multiprocessing.Pool(processes = multiprocessing.cpu_count()-1)
+    pool = multiprocessing.Pool(processes=multiprocessing.cpu_count()-1)
     size_list = list(range(INITIAL_POPULATION_SIZE))
     pool.map(generate_population, size_list)
     pool.close()
