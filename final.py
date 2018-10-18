@@ -290,8 +290,9 @@ def crossover_wrapper(i, population=[]):
         REDIS_CLIENT.hset(f'off-{offspring_index}', 'trip_list', json.dumps(trip_list))
         REDIS_CLIENT.hset(f'off-{offspring_index}', 'total_cost', total_cost)
 
+        offspring_index += 1
         end_cx = time.time()
-        print(f'worker:{i} crossover time elapsed:{end_cx-start_cx}')
+        print(f'worker:{i} offspring_index:{offspring_index} crossover time elapsed:{end_cx-start_cx}')
 
 
 def tournament_selection(population, tournament_size, k):
