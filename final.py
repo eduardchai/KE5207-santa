@@ -360,7 +360,7 @@ if __name__ == '__main__':
     # 4. CROSSOVER SELECTED POPULATION
     chunked_selection = chunks(cx_population, multiprocessing.cpu_count()-1)
     jobs = []
-    for i in range(1):
+    for i in range(len(chunked_selection)):
         selection_chunk = chunked_selection[i]
         p = multiprocessing.Process(target=crossover_wrapper, args=(i,), kwargs={'population': selection_chunk})
         jobs.append(p)
