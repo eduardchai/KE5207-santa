@@ -215,10 +215,7 @@ def fit_gifts_to_trip(gift_list, trip):
     return gift_list, { 'gift_list': curr_gift_list, 'total_weight': curr_weight}
 
 
-def crossover(parent_a_ori, parent_b_ori):
-    parent_a = parent_a_ori['trip_list'].copy()
-    parent_b = parent_b_ori['trip_list'].copy()
-
+def crossover(offspring_index, parent_a, parent_b):
     offspring = []
     delivered_gifts = []
     low_weight_trip_id = []
@@ -274,7 +271,8 @@ def crossover(parent_a_ori, parent_b_ori):
 
     offspring_cost = total_weariness(offspring_list)
 
-    return offspring_list, offspring_cost
+    REDIS_CLIENT.hset(f'off-{offspring_index}', 'trip_list', json.dumps(offspring_list))
+    REDIS_CLIENT.hset(f'off-{offspring_index}', 'total_cost', float(offspring_cost))
 
 
 def crossover_wrapper(i, population=[]):
@@ -284,11 +282,8 @@ def crossover_wrapper(i, population=[]):
     print(f'worker:{i} pop_size:{len(population)}')
     for parent_a, parent_b in zip(population[::2], population[1::2]):
         start_cx = time.time()
-
-        trip_list, total_cost = crossover(parent_a, parent_b)
-
-        REDIS_CLIENT.hset(f'off-{offspring_index}', 'trip_list', json.dumps(trip_list))
-        REDIS_CLIENT.hset(f'off-{offspring_index}', 'total_cost', total_cost)
+        print(f'worker:{i} crossover parent_a:{len(parent_a["trip_list"])} parent_b:{len(parent_b["trip_list"])}')
+        crossover(offspring_index, parent_a["trip_list"].copy(), parent_b["trip_list"].copy())
 
         offspring_index += 1
         end_cx = time.time()
@@ -348,23 +343,24 @@ if __name__ == '__main__':
     new_generation += sorted_by_fitness[:int(ELITE_NUM)]
 
     # 3. POPULATION SELECTION BY TOURNAMENT
+    # Here we multiply ELITE RATE by 2 because the other half will be used for mutation
     SELECTION_NUM = INITIAL_POPULATION_SIZE * (1 - ELITE_RATE*2)
     NUM_OF_WINNERS_PER_TOURNAMENT = 2
     TOURNAMENT_SIZE = 30
-    selected_population = []
+    cx_population = []
     for _ in range(int(SELECTION_NUM)):
         winners = tournament_selection(initial_population, TOURNAMENT_SIZE, NUM_OF_WINNERS_PER_TOURNAMENT)
         for winner in winners:
             winner_id = winner[0]
-            selected_population.append({
+            cx_population.append({
                 'trip_list': initial_population[winner_id]['trip_list'],
                 'total_cost': initial_population[winner_id]['total_cost']
             })
 
-    # 3. CROSSOVER SELECTED POPULATION
-    chunked_selection = chunks(selected_population, multiprocessing.cpu_count()-1)
+    # 4. CROSSOVER SELECTED POPULATION
+    chunked_selection = chunks(cx_population, multiprocessing.cpu_count()-1)
     jobs = []
-    for i in range(len(chunked_selection)):
+    for i in range(1):
         selection_chunk = chunked_selection[i]
         p = multiprocessing.Process(target=crossover_wrapper, args=(i,), kwargs={'population': selection_chunk})
         jobs.append(p)
@@ -372,6 +368,18 @@ if __name__ == '__main__':
 
     for job in jobs:
         job.join()
+
+
+    # 5. CONSTRUCT POPULATION FOR MUTATION
+    # mutation_population = []
+    # for i in range(int(len(cx_population) / 2)):
+    #     trip_list = json.loads(REDIS_CLIENT.hget(f'off-{i}', 'trip_list'))
+    #     total_cost = float(REDIS_CLIENT.hget(f'off-{i}', 'total_cost'))
+    #     mutation_population.append({
+    #         'trip_list': trip_list,
+    #         'total_cost': total_cost
+    #     })
+
 
     end = time.time()
     print(f'time_elapsed:{end-start}')
