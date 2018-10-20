@@ -4,6 +4,7 @@ import utils
 import multiprocessing
 import redis
 import json
+import gc
 from haversine import haversine
 
 NORTH_POLE = (90, 0)
@@ -222,13 +223,13 @@ def mutate_wrapper(i, population=[]):
     :param i: worker id
     :param population: population that need to be processed
     """
-    # print(f'mutation_worker:{i} pop_size:{len(population)}')
+    print(f'mutation_worker:{i} pop_size:{len(population)}')
     mutation_id = i * len(population)
     for ind in population:
-        start_cx = time.time()
+        start_mutate = time.time()
         mutate(mutation_id, ind['trip_list'].copy(), ind['total_cost'])
-        end_cx = time.time()
-        # print(f'mutation_worker:{i} mutation_id:{mutation_id} mutation time elapsed:{end_cx-start_cx}')
+        end_mutate = time.time()
+        print(f'mutation_worker:{i} mutation_id:{mutation_id} mutation time elapsed:{end_mutate-start_mutate}')
         mutation_id += 1
 
 
@@ -432,17 +433,37 @@ def crossover_wrapper(i, population=[]):
         print(f'worker:{i} offspring_index:{offspring_index} crossover time elapsed:{end_cx-start_cx}')
 
 
+def get_initial_population():
+    """
+    Get initial population. Get the new generation when possible.
+    :return: initial population
+    """
+    initial_population = []
+    try:
+        for i in range(INITIAL_POPULATION_SIZE):
+            trip_list = json.loads(REDIS_CLIENT.hget(f'new-{i}', 'trip_list'))
+            total_cost = float(REDIS_CLIENT.hget(f'new-{i}', 'total_cost'))
+            initial_population.append({
+                'trip_list': trip_list,
+                'total_cost': total_cost
+            })
+    except:
+        initial_population = []
+        for i in range(INITIAL_POPULATION_SIZE):
+            trip_list = json.loads(REDIS_CLIENT.hget(f'ind-{i}', 'trip_list'))
+            total_cost = float(REDIS_CLIENT.hget(f'ind-{i}', 'total_cost'))
+            initial_population.append({
+                'trip_list': trip_list,
+                'total_cost': total_cost
+            })
+
+    return initial_population
+
+
 if __name__ == '__main__':
 
     # 1. GET INITIAL POPULATION
-    initial_population = []
-    for i in range(INITIAL_POPULATION_SIZE):
-        trip_list = json.loads(REDIS_CLIENT.hget(f'ind-{i}', 'trip_list'))
-        total_cost = float(REDIS_CLIENT.hget(f'ind-{i}', 'total_cost'))
-        initial_population.append({
-            'trip_list': trip_list,
-            'total_cost': total_cost
-        })
+    initial_population = get_initial_population()
 
     for step in range(MAX_ITERATIONS):
         start = time.time()
@@ -467,16 +488,16 @@ if __name__ == '__main__':
                 })
 
         # 4. CROSSOVER SELECTED POPULATION
-        # chunked_selection = chunks(cx_population, multiprocessing.cpu_count()-1)
-        # jobs = []
-        # for i in range(len(chunked_selection)):
-        #     selection_chunk = chunked_selection[i]
-        #     p = multiprocessing.Process(target=crossover_wrapper, args=(i,), kwargs={'population': selection_chunk})
-        #     jobs.append(p)
-        #     p.start()
-        #
-        # for job in jobs:
-        #     job.join()
+        chunked_selection = chunks(cx_population, multiprocessing.cpu_count()-1)
+        jobs = []
+        for i in range(len(chunked_selection)):
+            selection_chunk = chunked_selection[i]
+            p = multiprocessing.Process(target=crossover_wrapper, args=(i,), kwargs={'population': selection_chunk})
+            jobs.append(p)
+            p.start()
+
+        for job in jobs:
+            job.join()
 
 
         # 5. CONSTRUCT POPULATION FOR MUTATION
